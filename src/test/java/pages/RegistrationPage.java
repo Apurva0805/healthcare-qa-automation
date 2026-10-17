@@ -492,7 +492,8 @@ public class RegistrationPage {
         queueNo.waitFor();
         assertThat(queueNo).isVisible();
         assertThat(queueNo).isEnabled();
-        queueNo.fill(queueNumber);
+        queueNo.click();
+        queueNo.pressSequentially(queueNumber);
         // Move focus so the form processes the new queue number.
         queueNo.press("Tab");
         assertThat(queueNo).hasValue(queueNumber);

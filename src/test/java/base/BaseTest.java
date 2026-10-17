@@ -4,6 +4,9 @@ import com.microsoft.playwright.*;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import pages.LoginPage;
+import org.testng.ITestResult;
+import java.nio.file.Paths;
+import com.microsoft.playwright.Page;
 
 public class BaseTest {
 
@@ -44,11 +47,39 @@ public class BaseTest {
         System.out.println("Login successful. Dashboard displayed.");
     }
 
-    @AfterMethod(alwaysRun = true)
-    public void tearDown() {
+    @AfterMethod
+    public void tearDown(ITestResult result) {
 
-        if (browserContext != null) {browserContext.close();}
-        if (browser != null) {browser.close();}
-        if (playwright != null) {playwright.close();}
+        if (result.getStatus() == ITestResult.FAILURE && page != null) {
+            try {
+                String testName = result.getName();
+
+                java.nio.file.Files.createDirectories(Paths.get("screenshots"));
+
+                page.screenshot(
+                        new Page.ScreenshotOptions()
+                                .setPath(Paths.get("screenshots", testName + ".png"))
+                                .setFullPage(true)
+                );
+
+                System.out.println(
+                        "Failure screenshot saved for: " + testName
+                );
+
+            } catch (Exception e) {
+                System.out.println(
+                        "Could not capture screenshot: " + e.getMessage()
+                );
+            }
+        }
+
+        // Keep your existing browser cleanup code below this point.
+        if (browser != null) {
+            browser.close();
+        }
+
+        if (playwright != null) {
+            playwright.close();
+        }
     }
 }

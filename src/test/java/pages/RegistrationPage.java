@@ -1,8 +1,10 @@
 package pages;
 
+import com.microsoft.playwright.Dialog;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Response;
+import com.microsoft.playwright.TimeoutError;
 import com.microsoft.playwright.assertions.LocatorAssertions;
 import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.SelectOption;
@@ -12,8 +14,11 @@ import org.testng.Assert;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
@@ -75,16 +80,14 @@ public class RegistrationPage {
     // Common helpers
     // ------------------------------------------------------------
 
-    private Locator model(String ngModel) {
+    private Locator findField(String ngModel) {
         return page.locator(
                 "[ng-model='" + ngModel + "']:visible"
         ).first();
     }
 
-    private void fillIfPresent(String ngModel, String value) {
-        Locator field = page.locator(
-                "[ng-model='" + ngModel + "']:visible"
-        ).first();
+    private void fillFieldIfAvailable(String ngModel, String value) {
+        Locator field = findField(ngModel);
 
         if (field.count() > 0 && field.isVisible() && field.isEnabled()) {
             field.fill(value);
@@ -95,7 +98,7 @@ public class RegistrationPage {
         }
     }
 
-    private void choose(String ngModel, String requestedText) {
+    private void selectDropdownOption(String ngModel, String requestedText) {
         Locator dropdown = page.locator(
                 "select[ng-model='" + ngModel + "']:visible"
         ).first();
@@ -148,7 +151,7 @@ public class RegistrationPage {
         page.waitForTimeout(300);
     }
 
-    private void chooseFirstAvailable(String ngModel) {
+    private void selectFirstDropdownOption(String ngModel) {
         Locator dropdown = page.locator(
                 "select[ng-model='" + ngModel + "']:visible"
         ).first();
@@ -185,7 +188,7 @@ public class RegistrationPage {
         );
     }
 
-    private String selectedLabel(String ngModel) {
+    private String getSelectedOptionText(String ngModel) {
         Locator dropdown = page.locator(
                 "select[ng-model='" + ngModel + "']:visible"
         ).first();
@@ -195,7 +198,7 @@ public class RegistrationPage {
                 .trim();
     }
 
-    private Locator button(String name) {
+    private Locator findButton(String name) {
         return page.getByRole(
                 AriaRole.BUTTON,
                 new Page.GetByRoleOptions()
@@ -241,13 +244,13 @@ public class RegistrationPage {
         patientNameField.fill(patientName);
         assertThat(patientNameField).hasValue(patientName);
 
-        choose("Registration.PrefixID", male ? "Mr" : "Ms");
+        selectDropdownOption("Registration.PrefixID", male ? "Mr" : "Ms");
 
         // Identification type.
-        choose("Registration.ICCardTypeID", "New IC");
+        selectDropdownOption("Registration.ICCardTypeID", "New IC");
 
         // Enter NRIC and trigger the application's change event.
-        Locator nricField = model("Registration.NationalId");
+        Locator nricField = findField("Registration.NationalId");
 
         nricField.fill(patientNric);
         nricField.press("Tab");
@@ -263,13 +266,13 @@ public class RegistrationPage {
         );
 
         String expectedGender = male ? "Male" : "Female";
-        choose("Registration.GenderID", expectedGender);
+        selectDropdownOption("Registration.GenderID", expectedGender);
 
         // Nationality and personal details.
-        choose("Registration.NationalityID", "Malaysian");
-        choose("Registration.ReligionID", "Islam");
-        choose("Registration.RaceID", "Malay");
-        choose("Registration.MaritalStatusID", "Single");
+        selectDropdownOption("Registration.NationalityID", "Malaysian");
+        selectDropdownOption("Registration.ReligionID", "Islam");
+        selectDropdownOption("Registration.RaceID", "Malay");
+        selectDropdownOption("Registration.MaritalStatusID", "Single");
 
         // Blood group is optional. Select O or O+ only if available.
         Locator bloodGroup = page.locator(
@@ -322,7 +325,7 @@ public class RegistrationPage {
         }
 
         String actualGender =
-                selectedLabel("Registration.GenderID");
+                getSelectedOptionText("Registration.GenderID");
 
         if (!actualGender.equalsIgnoreCase(expectedGender)) {
             throw new AssertionError(
@@ -340,12 +343,12 @@ public class RegistrationPage {
 
     public void fillCorrespondence() {
 
-        fillIfPresent("Registration.ResAddress", "12 Jalan Automation");
-        fillIfPresent("Registration.ResHouseNo", "12");
-        fillIfPresent("Registration.ResStreet", "Taman Testing");
-        fillIfPresent("Registration.ResPinCode", "47500");
+        fillFieldIfAvailable("Registration.ResAddress", "12 Jalan Automation");
+        fillFieldIfAvailable("Registration.ResHouseNo", "12");
+        fillFieldIfAvailable("Registration.ResStreet", "Taman Testing");
+        fillFieldIfAvailable("Registration.ResPinCode", "47500");
 
-        choose("Registration.ResStateID", "Selangor");
+        selectDropdownOption("Registration.ResStateID", "Selangor");
 
         // City is dependent on State.
         Locator city = page.locator(
@@ -358,15 +361,15 @@ public class RegistrationPage {
                 () -> city.locator("option").count() > 1
         );
 
-        chooseFirstAvailable("Registration.ResCityID");
-        choose("Registration.ResCountryID", "Malaysia");
+        selectFirstDropdownOption("Registration.ResCityID");
+        selectDropdownOption("Registration.ResCountryID", "Malaysia");
 
-        fillIfPresent(
+        fillFieldIfAvailable(
                 "Registration.MobileNo",
                 "0123456789"
         );
 
-        fillIfPresent(
+        fillFieldIfAvailable(
                 "Registration.Email",
                 "auto." + stamp + "@example.com"
         );
@@ -381,26 +384,26 @@ public class RegistrationPage {
 
         String kinName = "AUTOTESTKIN";
 
-        choose("Registration.KinTitleID", male ? "Ms" : "Mr");
+        selectDropdownOption("Registration.KinTitleID", male ? "Ms" : "Mr");
 
-        fillIfPresent("Registration.KinName", kinName);
+        fillFieldIfAvailable("Registration.KinName", kinName);
 
         // Select identification type
-        choose("Registration.NOKnationalid", "Malaysian");
+        selectDropdownOption("Registration.NOKnationalid", "Malaysian");
 
-        fillIfPresent(
+        fillFieldIfAvailable(
                 "Registration.KinNationalId",
                 kinNric
         );
 
-        choose("Registration.KinRelationID", "Guardian");
+        selectDropdownOption("Registration.KinRelationID", "Guardian");
 
-        fillIfPresent(
+        fillFieldIfAvailable(
                 "Registration.KinMobileNo",
                 "0123456788"
         );
 
-        fillIfPresent(
+        fillFieldIfAvailable(
                 "Registration.KinEmail",
                 "kin." + stamp + "@example.com"
         );
@@ -421,7 +424,7 @@ public class RegistrationPage {
         }
 
         // Click Add
-        Locator addButton = button("Add").first();
+        Locator addButton = findButton("Add").first();
 
         assertThat(addButton).isVisible();
         addButton.click();
@@ -465,8 +468,16 @@ public class RegistrationPage {
         department.selectOption(
                 new SelectOption().setLabel("Cardiology")
         );
+        if (!getSelectedOptionText("Visit.DepartmentID")
+                .equalsIgnoreCase("Cardiology")) {
+            throw new AssertionError(
+                    "Cardiology department was not selected"
+            );
+        }
 
-        Locator doctor = page.locator("select[ng-model='Visit.DoctorID']");
+        Locator doctor =
+                page.locator("select[ng-model='Visit.DoctorID']:visible")
+                        .first();
         page.waitForCondition(
                 () -> doctor.locator("option").count() > 1
         );
@@ -476,25 +487,28 @@ public class RegistrationPage {
         );
         assertThat(doctor).hasValue("number:3288");
 
-        choose("Visit.VisitTypeID", "New");
-        if (!selectedLabel("Visit.VisitTypeID").equalsIgnoreCase("New")) {
+        selectDropdownOption("Visit.VisitTypeID", "New");
+        if (!getSelectedOptionText("Visit.VisitTypeID")
+                .equalsIgnoreCase("New")) {
             throw new AssertionError("New visit type was not selected");
         }
 
         Locator referralSource =
-                page.locator("select[ng-model='Visit.PatientSourceID']");
+                page.locator(
+                        "select[ng-model='Visit.PatientSourceID']:visible"
+                ).first();
         referralSource.selectOption(
                 new SelectOption().setValue("number:8")
         );
         assertThat(referralSource).hasValue("number:8");
 
-        Locator queueNo = page.locator("input[ng-model='Visit.TokenNo']");
+        Locator queueNo =
+                page.locator("input[ng-model='Visit.TokenNo']:visible")
+                        .first();
         queueNo.waitFor();
         assertThat(queueNo).isVisible();
         assertThat(queueNo).isEnabled();
-        queueNo.click();
-        queueNo.pressSequentially(queueNumber);
-        // Move focus so the form processes the new queue number.
+        queueNo.fill(queueNumber);
         queueNo.press("Tab");
         assertThat(queueNo).hasValue(queueNumber);
     }
@@ -510,38 +524,133 @@ public class RegistrationPage {
         assertThat(saveButton).isVisible();
         assertThat(saveButton).isEnabled();
 
-        saveButton.click();
+        List<String> invalidFieldDescriptions =
+                describeInvalidVisibleFields();
+        if (!invalidFieldDescriptions.isEmpty()) {
+            throw new AssertionError(
+                    "Registration cannot be saved because these visible "
+                            + "fields are invalid: "
+                            + String.join(", ", invalidFieldDescriptions)
+            );
+        }
 
         Locator confirmationPrompt =
                 page.getByText("Are you sure. Do you want to Save");
-        confirmationPrompt.waitFor();
-
         Locator confirmSaveButton = page.getByRole(
                 AriaRole.BUTTON,
                 new Page.GetByRoleOptions()
                         .setName("Save")
                         .setExact(true)
         ).last();
-        assertThat(confirmSaveButton).isVisible();
-        Response saveResponse = page.waitForResponse(
-                response -> {
-                    String method = response.request().method();
-                    String resourceType = response.request().resourceType();
-                    return ("POST".equalsIgnoreCase(method)
-                            || "PUT".equalsIgnoreCase(method)
-                            || "PATCH".equalsIgnoreCase(method))
-                            && ("xhr".equalsIgnoreCase(resourceType)
-                            || "fetch".equalsIgnoreCase(resourceType))
-                            && response.url().contains(
-                            "/api/patientregistration/IUD"
-                    );
-                },
-                confirmSaveButton::click
-        );
-        confirmationPrompt.waitFor(
-                new Locator.WaitForOptions()
-                        .setState(WaitForSelectorState.HIDDEN)
-        );
+
+        // A browser confirmation blocks the page until this handler responds.
+        AtomicReference<Dialog> confirmationDialog = new AtomicReference<>();
+
+        // Accept only the expected browser confirmation.
+        Consumer<Dialog> dialogHandler = dialog -> {
+            confirmationDialog.set(dialog);
+            if ("confirm".equals(dialog.type())
+                    && dialog.message().contains(
+                    "Are you sure. Do you want to Save")) {
+                dialog.accept();
+            } else {
+                dialog.dismiss();
+            }
+        };
+
+        page.onDialog(dialogHandler);
+        Response saveResponse;
+        try {
+            // Click Save and wait for the registration API request.
+            saveResponse = page.waitForResponse(
+                    response -> {
+                        String method = response.request().method();
+                        String resourceType =
+                                response.request().resourceType();
+                        return ("POST".equalsIgnoreCase(method)
+                                || "PUT".equalsIgnoreCase(method)
+                                || "PATCH".equalsIgnoreCase(method))
+                                && ("xhr".equalsIgnoreCase(resourceType)
+                                || "fetch".equalsIgnoreCase(resourceType))
+                                && response.url().contains(
+                                "/api/patientregistration/IUD"
+                        );
+                    },
+                    new Page.WaitForResponseOptions()
+                            .setTimeout(10000),
+                    () -> {
+                        saveButton.click();
+                        Dialog dialog = confirmationDialog.get();
+                        if (dialog != null) {
+                            if (!"confirm".equals(dialog.type())
+                                    || !dialog.message().contains(
+                                    "Are you sure. Do you want to Save")) {
+                                throw new AssertionError(
+                                        "Unexpected browser confirmation: "
+                                                + dialog.message()
+                                );
+                            }
+                        } else {
+                            try {
+                                confirmationPrompt.waitFor(
+                                        new Locator.WaitForOptions()
+                                                .setTimeout(2000)
+                                );
+                                assertThat(confirmSaveButton).isVisible();
+                                confirmSaveButton.click();
+                            } catch (TimeoutError timeout) {
+                                List<String> invalidFields =
+                                        describeInvalidVisibleFields();
+                                if (!invalidFields.isEmpty()) {
+                                    throw new AssertionError(
+                                            "Save was blocked by browser "
+                                                    + "validation; invalid "
+                                                    + "visible fields: "
+                                                    + String.join(
+                                                    ", ", invalidFields
+                                            ),
+                                            timeout
+                                    );
+                                }
+                            }
+                        }
+                    }
+            );
+        } catch (TimeoutError timeout) {
+            List<String> invalidFields = describeInvalidVisibleFields();
+            String validationText = String.join(
+                    " | ",
+                    page.locator(
+                            ".text-danger:visible, "
+                                    + ".validation-error:visible, "
+                                    + ".field-validation-error:visible, "
+                                    + ".toast:visible, "
+                                    + ".alert:visible, "
+                                    + "[role='alert']:visible"
+                    ).allInnerTexts()
+            ).trim();
+            throw new AssertionError(
+                    "Timed out waiting for the patient-registration save "
+                            + "request."
+                            + (invalidFields.isEmpty()
+                            ? ""
+                            : " Invalid visible fields: "
+                                    + String.join(", ", invalidFields) + ".")
+                            + (validationText.isEmpty()
+                            ? ""
+                            : " Validation messages: " + validationText),
+                    timeout
+            );
+        } finally {
+            page.offDialog(dialogHandler);
+        }
+
+        if (confirmationDialog.get() == null) {
+            confirmationPrompt.waitFor(
+                    new Locator.WaitForOptions()
+                            .setState(WaitForSelectorState.HIDDEN)
+            );
+        }
 
         if (!saveResponse.ok()) {
             throw new AssertionError(
@@ -595,4 +704,137 @@ public class RegistrationPage {
         System.out.println("PASS: Patient registration completed and Visit screen opened.");
 
     }
+
+    private List<String> describeInvalidVisibleFields() {
+        Locator invalidFields = page.locator(
+                "input:invalid:visible, "
+                        + "select:invalid:visible, "
+                        + "textarea:invalid:visible"
+        );
+        List<String> descriptions = new ArrayList<>();
+
+        for (Locator field : invalidFields.all()) {
+            String description = field.getAttribute("ng-model");
+            if (description == null || description.isBlank()) {
+                description = field.getAttribute("name");
+            }
+            if (description == null || description.isBlank()) {
+                description = field.getAttribute("id");
+            }
+            descriptions.add(
+                    description == null || description.isBlank()
+                            ? field.evaluate("element => element.tagName")
+                                    .toString()
+                            : description
+            );
+        }
+
+        return descriptions;
+    }
+
+
+    public void clearPatientName() {
+        Locator patientNameField =
+                page.locator("input[ng-model='Registration.FirstName']:visible")
+                        .first();
+
+        patientNameField.waitFor();
+
+        patientNameField.fill("");
+
+        Assert.assertEquals(
+                patientNameField.inputValue(),
+                "",
+                "Patient name should be blank for this negative test"
+        );
+    }
+
+    public void fillPatientInformationWithInvalidIC(String invalidIC) {
+        if (invalidIC == null || invalidIC.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Invalid identification value must not be blank"
+            );
+        }
+
+        Locator nationalId = findField("Registration.NationalId");
+        nationalId.fill(invalidIC);
+        nationalId.press("Tab");
+        assertThat(nationalId).hasValue(invalidIC);
+    }
+
+    public boolean isIdentificationValidationDisplayed() {
+        Locator nationalId = findField("Registration.NationalId");
+        boolean invalidField = (Boolean) nationalId.evaluate(
+                "element => !element.checkValidity() "
+                        + "|| element.classList.contains('ng-invalid')"
+        );
+
+        List<String> messages = page.locator(
+                ".text-danger:visible, "
+                        + ".validation-error:visible, "
+                        + ".field-validation-error:visible, "
+                        + "[role='alert']:visible"
+        ).allInnerTexts();
+
+        return invalidField || messages.stream().anyMatch(message ->
+                message.toLowerCase().matches(
+                        ".*(ic|nric|identification|national id|invalid).*"
+                )
+        );
+    }
+
+    public void attemptSaveWithMissingPatientName() {
+        Locator saveButton = page.locator("#regbutton");
+
+        Assert.assertTrue(
+                saveButton.isVisible(),
+                "Save button should be visible"
+        );
+
+        saveButton.click();
+
+        // Allow client-side validation to respond.
+        page.waitForTimeout(1500);
+
+        Locator patientNameField =
+                page.locator("input[ng-model='Registration.FirstName']:visible")
+                        .first();
+
+        Assert.assertEquals(
+                patientNameField.inputValue(),
+                "",
+                "Patient name should remain blank"
+        );
+
+        // Check native browser validation.
+        boolean browserValidationFailed =
+                (Boolean) patientNameField.evaluate(
+                        "(element) => !element.checkValidity()"
+                );
+
+        // Check common application validation elements.
+        boolean applicationValidationVisible =
+                page.locator(
+                        ".text-danger:visible, " +
+                                ".validation-error:visible, " +
+                                ".field-validation-error:visible, " +
+                                "[role='alert']:visible"
+                ).count() > 0;
+
+        // A successful save should not navigate to the Visit screen.
+        Assert.assertFalse(
+                page.url().contains("/#/VisitScreen"),
+                "A patient must not be registered without a name"
+        );
+
+        Assert.assertTrue(
+                browserValidationFailed || applicationValidationVisible,
+                "Expected patient-name validation, but no validation was detected"
+        );
+
+        System.out.println(
+                "PASS: Missing patient name was blocked by validation."
+        );
+    }
+
 }

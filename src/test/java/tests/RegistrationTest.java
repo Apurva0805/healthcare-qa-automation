@@ -25,11 +25,31 @@ public class RegistrationTest extends BaseTest {
         registration.fillVisitInformation(
                 RegistrationTestData.QUEUE_NUMBER
         );
+
         registration.save();
 
         Assert.assertTrue(
-                page.url().contains("/#/VisitScreen"),
+                registration.isRegistrationSuccessful(),
                 "REG01 FAILED: Patient registration was not successful"
+        );
+    }
+
+    // REG02 - Mandatory patient name validation
+    @Test(priority = 2, description = "REG02 - Mandatory patient name validation")
+    public void mandatoryPatientNameValidation() {
+
+        loginToDashboard();
+
+        RegistrationPage registration = new RegistrationPage(page);
+
+        registration.openRegistration();
+        registration.fillPatientInformation();
+        registration.clearPatientName();
+        registration.attemptSaveWithMissingPatientName();
+
+        Assert.assertTrue(
+                registration.isNameValidationDisplayed(),
+                "REG02 FAILED: Patient name validation was not displayed"
         );
     }
 
@@ -43,13 +63,19 @@ public class RegistrationTest extends BaseTest {
 
         registration.openRegistration();
         registration.fillPatientInformation();
+
         registration.fillPatientInformationWithInvalidIC(
                 RegistrationTestData.INVALID_IC
         );
 
         Assert.assertTrue(
                 registration.isIdentificationValidationDisplayed(),
-                "REG03 FAILED: Identification validation was not displayed"
+                "REG03 FAILED: Invalid identification number was not rejected"
+        );
+
+        Assert.assertFalse(
+                registration.isRegistrationSuccessful(),
+                "REG03 FAILED: Registration should not succeed with invalid IC"
         );
     }
 
@@ -64,6 +90,59 @@ public class RegistrationTest extends BaseTest {
         registration.openRegistration();
         registration.fillPatientInformation();
         registration.verifyNricAutoPopulated();
+
+        Assert.assertTrue(
+                registration.areDobAgeGenderValuesCorrect(),
+                "REG04 FAILED: DOB, age or gender does not match the NRIC"
+        );
     }
 
+    // REG05 - Visit information validation and creation
+    @Test(priority = 5, description = "REG05 - Visit information validation and creation")
+    public void visitInformationCreation() {
+
+        loginToDashboard();
+
+        RegistrationPage registration = new RegistrationPage(page);
+
+        registration.openRegistration();
+        registration.fillPatientInformation();
+        registration.verifyNricAutoPopulated();
+        registration.fillCorrespondence();
+        registration.addNextOfKin();
+
+        registration.fillVisitInformation(
+                RegistrationTestData.QUEUE_NUMBER
+        );
+
+        // Verify visit information before saving.
+        Assert.assertEquals(
+                registration.getDepartment(),
+                "Cardiology",
+                "REG05 FAILED: Incorrect department selected"
+        );
+
+        Assert.assertTrue(
+                !registration.getDoctor().isBlank(),
+                "REG05 FAILED: Doctor was not selected"
+        );
+
+        Assert.assertEquals(
+                registration.getVisitType(),
+                "New",
+                "REG05 FAILED: Incorrect visit type"
+        );
+
+        Assert.assertTrue(
+                !registration.getReferralSource().isBlank(),
+                "REG05 FAILED: Referral source was not selected"
+        );
+
+        registration.save();
+
+        Assert.assertTrue(
+                registration.isVisitCreated(),
+                "REG05 FAILED: Visit screen was not displayed"
+        );
+    }
 }

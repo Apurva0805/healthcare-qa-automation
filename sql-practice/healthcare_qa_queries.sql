@@ -37,11 +37,12 @@ GROUP BY PatientID
 HAVING COUNT(*) > 2;
 
 -- 8. Show patients who do not have any bills.
-SELECT PatientID
-FROM Patients
-WHERE PatientID NOT IN (
-    SELECT PatientID
-    FROM Bills
+SELECT p.PatientID, p.PatientName
+FROM Patients p
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM Bills b
+    WHERE b.PatientID = p.PatientID
 );
 
 -- 9. Add up the bill amounts for each patient.
@@ -101,9 +102,8 @@ GROUP BY BillID
 HAVING COUNT(*) > 1;
 
 -- 15. Show patients who do not have any bills, including their names.
-SELECT Patients.PatientID, Patients.PatientName
-FROM Patients
-WHERE Patients.PatientID NOT IN (
-    SELECT Bills.PatientID
-    FROM Bills
-);
+SELECT p.PatientID, p.PatientName
+FROM Patients p
+         LEFT JOIN Bills b
+                   ON p.PatientID = b.PatientID
+WHERE b.PatientID IS NULL;

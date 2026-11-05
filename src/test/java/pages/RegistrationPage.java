@@ -433,6 +433,33 @@ public class RegistrationPage {
                 "auto." + uniqueStamp + "@example.com"
         );
     }
+    public void fillInvalidEmail(String email) {
+        fillField("Registration.Email", email);
+    }
+
+    public boolean isEmailValidationDisplayed() {
+
+        Locator email = findField("Registration.Email");
+
+        return (Boolean) email.evaluate(
+                "el => !el.checkValidity() " +
+                        "|| el.classList.contains('ng-invalid')"
+        );
+    }
+    public String getMobileFieldDetails() {
+
+        Locator mobile = findField("Registration.MobileNo");
+
+        return mobile.evaluate(
+                "el => JSON.stringify({" +
+                        "type: el.type," +
+                        "pattern: el.pattern," +
+                        "minlength: el.minLength," +
+                        "maxlength: el.maxLength," +
+                        "required: el.required" +
+                        "})"
+        ).toString();
+    }
 
     // ============================================================
     // NEXT OF KIN
@@ -639,6 +666,28 @@ public class RegistrationPage {
         };
 
         page.onDialog(dialogHandler);
+        StringBuilder observedApiTraffic = new StringBuilder();
+
+        Consumer<com.microsoft.playwright.Request> requestLogger = request -> {
+            if (request.url().contains("/api/")) {
+                observedApiTraffic.append("\nREQUEST: ")
+                        .append(request.method())
+                        .append(" ")
+                        .append(request.url());
+            }
+        };
+
+        Consumer<Response> responseLogger = response -> {
+            if (response.url().contains("/api/")) {
+                observedApiTraffic.append("\nRESPONSE: HTTP ")
+                        .append(response.status())
+                        .append(" ")
+                        .append(response.url());
+            }
+        };
+
+        page.onRequest(requestLogger);
+        page.onResponse(responseLogger);
 
         Response response;
 
@@ -719,18 +768,21 @@ public class RegistrationPage {
 
             throw new AssertionError(
                     "Timed out waiting for patient-registration API request."
-                            + (
-                            validationMessages.isBlank()
-                                    ? ""
-                                    : " Validation messages: "
-                                      + validationMessages
-                    ),
+                            + "\nVisible validation messages: "
+                            + (validationMessages.isBlank()
+                            ? "None detected"
+                            : validationMessages)
+                            + "\nObserved API traffic: "
+                            + (observedApiTraffic.length() == 0
+                            ? "No API requests detected"
+                            : observedApiTraffic),
                     timeout
             );
 
         } finally {
-
             page.offDialog(dialogHandler);
+            page.offRequest(requestLogger);
+            page.offResponse(responseLogger);
         }
 
         if (!response.ok()) {

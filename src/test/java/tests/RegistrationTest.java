@@ -1,4 +1,3 @@
-
 package tests;
 
 import base.BaseTest;
@@ -22,6 +21,7 @@ public class RegistrationTest extends BaseTest {
         registration.verifyNricAutoPopulated();
         registration.fillCorrespondence();
         registration.addNextOfKin();
+
         registration.fillVisitInformation(
                 RegistrationTestData.QUEUE_NUMBER
         );
@@ -51,6 +51,11 @@ public class RegistrationTest extends BaseTest {
                 registration.isNameValidationDisplayed(),
                 "REG02 FAILED: Patient name validation was not displayed"
         );
+
+        Assert.assertFalse(
+                registration.isRegistrationSuccessful(),
+                "REG02 FAILED: Registration should not succeed without a patient name"
+        );
     }
 
     // REG03 - Invalid identification number
@@ -73,9 +78,22 @@ public class RegistrationTest extends BaseTest {
                 "REG03 FAILED: Invalid identification number was not rejected"
         );
 
+        // Attempt to save with invalid IC
+        page.locator("#regbutton").click();
+
+        Assert.assertTrue(
+                registration.isIdentificationValidationDisplayed(),
+                "REG03 FAILED: Invalid IC validation was not displayed after Save"
+        );
+
         Assert.assertFalse(
                 registration.isRegistrationSuccessful(),
                 "REG03 FAILED: Registration should not succeed with invalid IC"
+        );
+
+        Assert.assertFalse(
+                registration.isVisitCreated(),
+                "REG03 FAILED: Visit should not be created with invalid IC"
         );
     }
 
@@ -115,7 +133,6 @@ public class RegistrationTest extends BaseTest {
                 RegistrationTestData.QUEUE_NUMBER
         );
 
-        // Verify visit information before saving.
         Assert.assertEquals(
                 registration.getDepartment(),
                 "Cardiology",
@@ -143,6 +160,31 @@ public class RegistrationTest extends BaseTest {
         Assert.assertTrue(
                 registration.isVisitCreated(),
                 "REG05 FAILED: Visit screen was not displayed"
+        );
+    }
+
+    // REG07 - Invalid email validation
+    @Test(priority = 7, description = "REG07 - Invalid email validation")
+    public void invalidEmailValidation() {
+
+        loginToDashboard();
+
+        RegistrationPage registration = new RegistrationPage(page);
+
+        registration.openRegistration();
+        registration.fillPatientInformation();
+        registration.fillCorrespondence();
+
+        registration.fillInvalidEmail("invalid-email");
+
+        Assert.assertTrue(
+                registration.isEmailValidationDisplayed(),
+                "REG07 FAILED: Invalid email was not rejected"
+        );
+
+        Assert.assertFalse(
+                registration.isRegistrationSuccessful(),
+                "REG07 FAILED: Registration should not succeed with invalid email"
         );
     }
 }

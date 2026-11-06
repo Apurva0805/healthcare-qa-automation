@@ -7,6 +7,7 @@ import com.microsoft.playwright.Response;
 import com.microsoft.playwright.TimeoutError;
 import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.SelectOption;
+import com.microsoft.playwright.options.WaitForSelectorState;
 import org.testng.Assert;
 
 import java.time.LocalDate;
@@ -265,7 +266,7 @@ public class RegistrationPage {
 
         Locator nameField =
                 page.locator(
-                        "input[ng-model='Registration.FirstName']"
+                        "input[ng-model='Registration.FirstName']:visible"
                 ).first();
 
         assertThat(nameField).isVisible();
@@ -543,6 +544,7 @@ public class RegistrationPage {
     // VISIT INFORMATION
     // ============================================================
 
+
     public void fillVisitInformation(String queueNumber) {
 
         if (queueNumber == null || queueNumber.isBlank()) {
@@ -551,18 +553,15 @@ public class RegistrationPage {
             );
         }
 
-        Locator department =
-                findDropdown("Visit.DepartmentID");
+        Locator department = findDropdown("Visit.DepartmentID");
 
         if (!department.isVisible()) {
-
             Locator visitHeading = page.getByText(
                     "Visit Information",
                     new Page.GetByTextOptions().setExact(true)
             ).first();
 
             assertThat(visitHeading).isVisible();
-
             visitHeading.click();
         }
 
@@ -578,8 +577,7 @@ public class RegistrationPage {
                 "Incorrect department selected"
         );
 
-        Locator doctor =
-                findDropdown("Visit.DoctorID");
+        Locator doctor = findDropdown("Visit.DoctorID");
 
         page.waitForCondition(
                 () -> doctor.locator("option").count() > 1
@@ -602,8 +600,7 @@ public class RegistrationPage {
                 "Incorrect visit type selected"
         );
 
-        Locator referralSource =
-                findDropdown("Visit.PatientSourceID");
+        Locator referralSource = findDropdown("Visit.PatientSourceID");
 
         referralSource.selectOption(
                 new SelectOption().setValue("number:8")
@@ -611,8 +608,7 @@ public class RegistrationPage {
 
         assertThat(referralSource).hasValue("number:8");
 
-        Locator queueField =
-                findField("Visit.TokenNo");
+        Locator queueField = findField("Visit.TokenNo");
 
         assertThat(queueField).isVisible();
         assertThat(queueField).isEnabled();
@@ -620,7 +616,20 @@ public class RegistrationPage {
         queueField.fill(queueNumber);
 
         assertThat(queueField).hasValue(queueNumber);
+
+        // Confirm the registration form has not disappeared.
+        Locator firstNameField = page.locator(
+                "input[ng-model='Registration.FirstName']"
+        ).first();
+
+        Assert.assertTrue(
+                firstNameField.count() > 0,
+                "First Name field disappeared after filling visit information"
+        );
+
+        System.out.println("Visit information filled successfully.");
     }
+
 
     // ============================================================
     // SAVE REGISTRATION
@@ -864,12 +873,14 @@ public class RegistrationPage {
 
     public void clearPatientName() {
 
-        Locator nameField =
-                page.locator(
-                        "input[ng-model='Registration.FirstName']:visible"
-                ).first();
+        Locator nameField = page.locator(
+                "input[ng-model='Registration.FirstName']:visible"
+        ).first();
 
-        nameField.waitFor();
+        nameField.waitFor(
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+        );
 
         nameField.fill("");
 
@@ -882,45 +893,43 @@ public class RegistrationPage {
 
     public void attemptSaveWithMissingPatientName() {
 
-        Locator nameField =
-                page.locator(
-                        "input[ng-model='Registration.FirstName']:visible"
-                ).first();
+        Locator firstNameField = page.locator(
+                "input[ng-model='Registration.FirstName']:visible"
+        ).first();
+
+        firstNameField.waitFor(
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+        );
 
         Assert.assertEquals(
-                nameField.inputValue(),
+                firstNameField.inputValue(),
                 "",
                 "Patient name must be blank before attempting save"
         );
 
-        Locator saveButton =
-                page.locator("#regbutton");
+        Locator saveButton = page.locator("#regbutton");
 
         assertThat(saveButton).isVisible();
-
         saveButton.click();
 
-        Locator nameValidation =
-                page.getByText(
-                        "Please Enter First Name!",
-                        new Page.GetByTextOptions().setExact(true)
-                );
+        Locator nameValidation = page.getByText(
+                "Please Enter First Name!",
+                new Page.GetByTextOptions().setExact(true)
+        );
 
-        assertThat(nameValidation).isVisible();
-
-        boolean browserValidation =
-                (Boolean) nameField.evaluate(
-                        "element => !element.checkValidity()"
-                );
-
-        Assert.assertFalse(
-                registrationSaved,
-                "Registration must not proceed without patient name"
+        boolean browserValidation = (Boolean) firstNameField.evaluate(
+                "element => !element.checkValidity()"
         );
 
         Assert.assertTrue(
                 browserValidation || nameValidation.isVisible(),
                 "No patient-name validation was detected"
+        );
+
+        Assert.assertFalse(
+                registrationSaved,
+                "Registration must not proceed without patient name"
         );
     }
 

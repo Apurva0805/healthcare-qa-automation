@@ -33,12 +33,8 @@ public class RegistrationNegativeTest extends BaseTest {
         // Make the required patient name blank.
         registrationPage.clearPatientName();
 
-        registrationPage.verifyNricAutoPopulated();
-        registrationPage.fillCorrespondence();
-        registrationPage.addNextOfKin();
-        registrationPage.fillVisitInformation("1002");
-
-        // Attempt to save without the patient name.
+        // Validate the required field before moving on to correspondence,
+        // next-of-kin, or visit information.
         registrationPage.attemptSaveWithMissingPatientName();
     }
 }

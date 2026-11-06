@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -26,9 +26,10 @@ jobs:
       - name: Install Playwright Chromium
         run: >
           mvn -B
+          -e
           org.codehaus.mojo:exec-maven-plugin:3.5.0:java
           -Dexec.mainClass=com.microsoft.playwright.CLI
-          -Dexec.args="install chromium"
+          -Dexec.args="install --with-deps chromium"
           -Dexec.classpathScope=test
 
       - name: Run automation tests

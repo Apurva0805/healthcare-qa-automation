@@ -1,0 +1,43 @@
+
+name: Healthcare QA Automation CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Install Playwright Chromium
+        run: >
+          mvn -B
+          org.codehaus.mojo:exec-maven-plugin:3.5.0:java
+          -Dexec.mainClass=com.microsoft.playwright.CLI
+          -Dexec.args="install chromium"
+          -Dexec.classpathScope=test
+
+      - name: Run automation tests
+        run: mvn -B clean test
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-screenshots
+          path: screenshots/
+          if-no-files-found: ignore

@@ -1,0 +1,73 @@
+
+description: "Healthcare Patient Registration AI Test Case Evaluation"
+
+prompts:
+  - file://patient_registration_prompt.txt
+
+providers:
+  - id: ollama:chat:qwen2.5:3b
+    config:
+      temperature: 0
+      num_predict: 2048
+
+
+tests:
+  - vars:
+      module: "Patient Registration"
+      scenario: "Successful registration of a new patient"
+    assert:
+      - type: contains
+        value: "Test Case ID"
+      - type: contains
+        value: "Expected Result"
+      - type: contains
+        value: "Positive"
+      - type: contains
+        value: "Negative"
+      - type: contains
+        value: "Priority"
+
+  - vars:
+      module: "Patient Registration"
+      scenario: "Mandatory field validation for missing patient name, DOB and gender"
+    assert:
+      - type: contains
+        value: "Test Case ID"
+      - type: contains
+        value: "Expected Result"
+      - type: contains
+        value: "Positive"
+      - type: contains
+        value: "Negative"
+      - type: contains
+        value: "Priority"
+
+  - vars:
+      module: "Patient Registration"
+      scenario: "Duplicate patient detection using an existing identification number"
+    assert:
+      - type: contains
+        value: "Test Case ID"
+      - type: contains
+        value: "Expected Result"
+      - type: contains
+        value: "Positive"
+      - type: contains
+        value: "Negative"
+      - type: contains
+        value: "Priority"
+
+  - vars:
+      module: "Patient Registration"
+      scenario: "Date of birth, age and gender consistency validation"
+    assert:
+      - type: contains
+        value: "Test Case ID"
+      - type: contains
+        value: "Expected Result"
+      - type: contains
+        value: "Positive"
+      - type: contains
+        value: "Negative"
+      - type: contains
+        value: "Priority"

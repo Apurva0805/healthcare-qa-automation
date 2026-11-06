@@ -33,11 +33,11 @@ jobs:
           -Dexec.classpathScope=test
 
       - name: Run automation tests
-        run: mvn -B clean test
+        run: mvn -B -Dplaywright.headless=true clean test
 
       - name: Upload screenshots
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: playwright-screenshots
           path: screenshots/

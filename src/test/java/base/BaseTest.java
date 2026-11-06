@@ -25,7 +25,9 @@ public class BaseTest {
         playwright = Playwright.create();
         browser = playwright.chromium().launch(
                 new BrowserType.LaunchOptions()
-                        .setHeadless(false)
+                        .setHeadless(Boolean.parseBoolean(
+                                System.getProperty("playwright.headless", "false")
+                        ))
         );
 
         browserContext = browser.newContext();

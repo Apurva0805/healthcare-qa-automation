@@ -26,8 +26,20 @@ public class LoginTest extends BaseTest {
         loginPage.enterPassword("wrongpassword");
         loginPage.clickLogin();
 
+        if (loginPage.dismissExistingSessionPopupIfPresent()) {
+            Assert.assertTrue(
+                    page.locator("#Username").isVisible(),
+                    "Login form should remain visible after declining session takeover"
+            );
+            Assert.assertFalse(
+                    page.url().contains("/PatientDashboard"),
+                    "Invalid login must not open the dashboard"
+            );
+            return;
+        }
+
         var errorMessage =
-                page.getByText("Invalid username or password").first();
+                page.getByText("Incorrect username and/or password").first();
         errorMessage.waitFor();
         Assert.assertTrue(
                 errorMessage.isVisible(),

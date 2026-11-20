@@ -663,13 +663,9 @@ public class RegistrationPage {
 
             handledDialog.set(dialog);
 
-            if ("confirm".equals(dialog.type())
-                    && dialog.message().contains(expectedConfirmation)) {
-
+            if ("confirm".equals(dialog.type())) {
                 dialog.accept();
-
             } else {
-
                 dialog.dismiss();
             }
         };

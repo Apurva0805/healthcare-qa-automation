@@ -42,6 +42,9 @@ public class BaseTest {
         loginPage.enterUsername("Apurva");
         loginPage.enterPassword("Tcare@123");
         loginPage.clickLogin();
+
+        loginPage.selectLoginContext();
+        loginPage.clickLogin();
         loginPage.handleExistingSessionPopup();
         loginPage.skipAccountSetup();
 

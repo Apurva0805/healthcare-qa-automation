@@ -1067,4 +1067,15 @@ public class RegistrationPage {
     public String getGeneratedPatientNric() {
         return patientNric;
     }
+    public void enterMobileNumber(String number) {
+        Locator mobile = findField("Registration.MobileNo");
+        mobile.fill("");
+        mobile.pressSequentially(number);
+    }
+
+    public int getMobileNumberLength() {
+        return findField("Registration.MobileNo")
+                .inputValue().length();
+    }
 }
+

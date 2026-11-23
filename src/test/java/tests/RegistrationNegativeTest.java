@@ -2,16 +2,17 @@
 package tests;
 
 import base.BaseTest;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 import pages.RegistrationPage;
 import utils.ExcelUtils;
 
 public class RegistrationNegativeTest extends BaseTest {
 
+
     @Test
     public void verifyPatientNameIsMandatory() {
 
-        // Read the negative test case from Excel.
         Object[] testCase =
                 ExcelUtils.getTestCaseById("TC-REG-002");
 
@@ -21,7 +22,6 @@ public class RegistrationNegativeTest extends BaseTest {
         System.out.println("Executing: " + testCaseId);
         System.out.println("Scenario: " + scenario);
 
-        // Open registration and prepare valid supporting data.
         loginToDashboard();
 
         RegistrationPage registrationPage =
@@ -29,12 +29,24 @@ public class RegistrationNegativeTest extends BaseTest {
 
         registrationPage.openRegistration();
         registrationPage.fillPatientInformation();
+        registrationPage.fillCorrespondence();
 
-        // Make the required patient name blank.
         registrationPage.clearPatientName();
-
-        // Validate the required field before moving on to correspondence,
-        // next-of-kin, or visit information.
         registrationPage.attemptSaveWithMissingPatientName();
+
+        Assert.assertTrue(
+                registrationPage.isNameValidationDisplayed(),
+                "FAIL: Mandatory patient-name validation was not displayed."
+        );
+
+        Assert.assertFalse(
+                registrationPage.isRegistrationSuccessful(),
+                "FAIL: Registration should not succeed with a blank patient name."
+        );
+
+        System.out.println(
+                "PASS: Mandatory patient-name validation verified."
+        );
     }
+
 }

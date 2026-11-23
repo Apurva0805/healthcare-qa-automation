@@ -248,7 +248,7 @@ public class RegistrationPage {
 
         Locator patientNameField =
                 page.locator(
-                        "input[ng-model='Registration.FirstName']"
+                        "input[ng-model='Registration.FirstName']:visible"
                 ).first();
 
         patientNameField.waitFor(
@@ -887,47 +887,59 @@ public class RegistrationPage {
         );
     }
 
+
     public void attemptSaveWithMissingPatientName() {
 
         Locator firstNameField = page.locator(
                 "input[ng-model='Registration.FirstName']:visible"
         ).first();
 
-        firstNameField.waitFor(
-                new Locator.WaitForOptions()
-                        .setState(WaitForSelectorState.VISIBLE)
-        );
-
-        Assert.assertEquals(
-                firstNameField.inputValue(),
-                "",
-                "Patient name must be blank before attempting save"
-        );
+        assertThat(firstNameField).isVisible();
+        assertThat(firstNameField).hasValue("");
 
         Locator saveButton = page.locator("#regbutton");
 
         assertThat(saveButton).isVisible();
+        assertThat(saveButton).isEnabled();
+
         saveButton.click();
 
-        Locator nameValidation = page.getByText(
-                "Please Enter First Name!",
-                new Page.GetByTextOptions().setExact(true)
-        );
-
-        boolean browserValidation = (Boolean) firstNameField.evaluate(
-                "element => !element.checkValidity()"
-        );
-
-        Assert.assertTrue(
-                browserValidation || nameValidation.isVisible(),
-                "No patient-name validation was detected"
-        );
-
-        Assert.assertFalse(
-                registrationSaved,
-                "Registration must not proceed without patient name"
+        System.out.println(
+                "Save attempted with blank patient name."
         );
     }
+
+    public boolean isNameValidationDisplayed() {
+
+        Locator nameField = page.locator(
+                "input[ng-model='Registration.FirstName']:visible"
+        ).first();
+
+        boolean browserValidation = (Boolean) nameField.evaluate(
+                "element => !element.checkValidity() "
+                        + "|| element.classList.contains('ng-invalid')"
+        );
+
+        List<String> messages = page.locator(
+                ".text-danger:visible, "
+                        + ".validation-error:visible, "
+                        + ".field-validation-error:visible, "
+                        + "[role='alert']:visible, "
+                        + ".toast:visible, "
+                        + ".alert:visible"
+        ).allInnerTexts();
+
+        boolean applicationValidation = messages.stream().anyMatch(
+                message -> {
+                    String normalized = message.toLowerCase();
+                    return normalized.contains("first name")
+                            || normalized.contains("patient name");
+                }
+        );
+
+        return browserValidation || applicationValidation;
+    }
+
 
     public void fillPatientInformationWithInvalidIC(String invalidIC) {
 
@@ -973,34 +985,6 @@ public class RegistrationPage {
                 );
 
         return invalidField || matchingMessage;
-    }
-
-    public boolean isNameValidationDisplayed() {
-
-        Locator nameField =
-                page.locator(
-                        "input[ng-model='Registration.FirstName']:visible"
-                ).first();
-
-        boolean browserValidation =
-                (Boolean) nameField.evaluate(
-                        "element => !element.checkValidity()"
-                );
-
-        boolean applicationValidation =
-                page.locator(
-                        ".text-danger:visible, "
-                                + ".validation-error:visible, "
-                                + ".field-validation-error:visible, "
-                                + "[role='alert']:visible, "
-                                + ".toast:visible, "
-                                + ".alert:visible"
-                ).allInnerTexts().stream().anyMatch(
-                        message -> message.toLowerCase().contains("name")
-                                || message.toLowerCase().contains("first")
-                );
-
-        return browserValidation || applicationValidation;
     }
 
     // ============================================================

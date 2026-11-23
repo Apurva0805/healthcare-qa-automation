@@ -44,6 +44,7 @@ public class RegistrationTest extends BaseTest {
 
         registration.openRegistration();
         registration.fillPatientInformation();
+        registration.fillCorrespondence();
         registration.clearPatientName();
         registration.attemptSaveWithMissingPatientName();
 

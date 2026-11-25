@@ -6,6 +6,7 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Response;
 import com.microsoft.playwright.TimeoutError;
 import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.SelectOption;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import org.testng.Assert;
@@ -228,6 +229,7 @@ public class RegistrationPage {
     // OPEN REGISTRATION
     // ============================================================
 
+
     public void openRegistration() {
 
         Locator opMenu = page.getByText(
@@ -238,21 +240,34 @@ public class RegistrationPage {
         assertThat(opMenu).isVisible();
         opMenu.click();
 
-        Locator registrationMenu = page.getByText(
+        Locator menu = page.locator("div[role='menu']");
+
+        Locator registrationMenu = menu.getByText(
                 "Registration",
-                new Page.GetByTextOptions().setExact(true)
+                new Locator.GetByTextOptions().setExact(true)
         ).first();
 
         assertThat(registrationMenu).isVisible();
-        registrationMenu.click();
 
-        Locator patientNameField =
-                page.locator(
-                        "input[ng-model='Registration.FirstName']:visible"
-                ).first();
+        // Wait until the Registration menu item is clickable
+        registrationMenu.waitFor(
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(15000)
+        );
+
+        registrationMenu.click(
+                new Locator.ClickOptions().setTimeout(15000)
+        );
+
+        Locator patientNameField = page.locator(
+                "input[ng-model='Registration.FirstName']:visible"
+        ).first();
 
         patientNameField.waitFor(
-                new Locator.WaitForOptions().setTimeout(15000)
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(15000)
         );
 
         assertThat(patientNameField).isVisible();
@@ -607,6 +622,11 @@ public class RegistrationPage {
         );
 
         assertThat(referralSource).hasValue("number:8");
+
+        page.waitForLoadState(
+                LoadState.NETWORKIDLE,
+                new Page.WaitForLoadStateOptions().setTimeout(15000)
+        );
 
         Locator queueField = findField("Visit.TokenNo");
 
@@ -1078,4 +1098,3 @@ public class RegistrationPage {
                 .inputValue().length();
     }
 }
-
